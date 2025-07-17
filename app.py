@@ -4,14 +4,16 @@ import streamlit as st
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-st.write("Fetching from:", FAQ_URL)
-res = requests.get(FAQ_URL)
-st.write("Raw response:", res.text)
 
 
 
 openai.api_key = st.secrets["openai_api_key"]
 FAQ_URL = "https://script.google.com/macros/s/AKfycbz5G3VpG9XobK25hPBi2d-mVo3i3HQvjl1oMOTNcSeQAT54fiAQ7Vhfz9GsY5m8NCnX/exec"  
+
+st.write("Fetching from:", FAQ_URL)
+res = requests.get(FAQ_URL)
+st.write("Raw response:", res.text)
+
 
 @st.cache_data
 def fetch_faq():
