@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-openai.api_key = st.secrets["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"]
+openai.api_key = st.secrets["openai_api_key"]
 FAQ_URL = "https://script.google.com/macros/s/AKfycbz5G3VpG9XobK25hPBi2d-mVo3i3HQvjl1oMOTNcSeQAT54fiAQ7Vhfz9GsY5m8NCnX/exec"  
 
 @st.cache_data
