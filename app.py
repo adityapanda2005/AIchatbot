@@ -8,7 +8,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 
 openai.api_key = st.secrets["openai_api_key"]
-FAQ_URL = "https://script.google.com/macros/s/AKfycbz5G3VpG9XobK25hPBi2d-mVo3i3HQvjl1oMOTNcSeQAT54fiAQ7Vhfz9GsY5m8NCnX/exec"  
+FAQ_URL = "https://script.google.com/macros/s/AKfycbzkhSsb_mIrgvDNMv5eh5-aDDrDse5UeTzLpyutUUlJP07Ew2wJxnM96IT24vroZ_hH/exec"  
 
 st.write("Fetching from:", FAQ_URL)
 res = requests.get(FAQ_URL)
