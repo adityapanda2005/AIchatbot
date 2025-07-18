@@ -1,5 +1,4 @@
-openai
 streamlit
-requests
-numpy
+sentence-transformers
 scikit-learn
+numpy
