@@ -4,40 +4,43 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from openai import OpenAI
 
-FAQ_URL = "https://script.google.com/macros/s/AKfycbzkhSsb_mIrgvDNMv5eh5-aDDrDse5UeTzLpyutUUlJP07Ew2wJxnM96IT24vroZ_hH/exec"  
+# ✅ Replace with your actual Web App URL
+FAQ_URL = "https://script.google.com/macros/s/AKfycbzkhSsb_mIrgvDNMv5eh5-aDDrDse5UeTzLpyutUUlJP07Ew2wJxnM96IT24vroZ_hH/exec"
 
-# ✅ Validate and fetch API key
-api_key = st.secrets.get("OPENAI_API_KEY")
-if not api_key:
-    st.error("❌ OPENAI_API_KEY not found in Streamlit secrets.")
-    st.stop()
-
-client = OpenAI(api_key=api_key)
+# ✅ Use the latest OpenAI client with project ID
+client = OpenAI(
+    api_key=st.secrets["OPENAI_API_KEY"],
+    project=st.secrets["OPENAI_PROJECT_ID"]
+)
 
 @st.cache_data
 def fetch_faq():
     res = requests.get(FAQ_URL)
-    st.write("Web App Response:", res.text)
-    return res.json()
+    st.write("Web App response:", res.text)  # Debug output
+    try:
+        return res.json()
+    except Exception as e:
+        st.error(f"Failed to parse JSON: {e}")
+        return []
 
 def get_embedding(text):
-    response = client.embeddings.create(
-        input=[text],
-        model="text-embedding-ada-002"
-    )
-    return response.data[0].embedding
+    try:
+        response = client.embeddings.create(
+            input=[text],
+            model="text-embedding-ada-002"
+        )
+        return response.data[0].embedding
+    except Exception as e:
+        st.error(f"Error creating embeddings: {e}")
+        return np.zeros((1536,))  # Fallback
 
+# 🔁 Load FAQ data and create embeddings
 faq_data = fetch_faq()
+
 questions = [item['question'] for item in faq_data]
 answers = [item['answer'] for item in faq_data]
 metadata = [{k: v for k, v in item.items() if k not in ['question', 'answer']} for item in faq_data]
-
-# ⚠️ Embeddings step (heavy, may hit rate limit or fail if key is wrong)
-try:
-    embeddings = [get_embedding(q) for q in questions]
-except Exception as e:
-    st.error(f"❌ Error creating embeddings: {e}")
-    st.stop()
+embeddings = [get_embedding(q) for q in questions]
 
 def get_best_answer(query):
     query_embed = get_embedding(query)
@@ -49,6 +52,7 @@ def get_best_answer(query):
         "metadata": metadata[best_idx]
     }
 
+# 🖥️ Streamlit UI
 st.set_page_config(page_title="FAQ Chatbot", page_icon="🤖")
 st.title("🤖 Property FAQ Chatbot")
 
@@ -62,6 +66,7 @@ if query:
     for key, value in result["metadata"].items():
         st.write(f"- **{key.capitalize()}**: {value}")
 
+ 
 
 
 
