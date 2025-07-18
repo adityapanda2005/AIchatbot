@@ -1,48 +1,42 @@
 import streamlit as st
-import requests
+import json
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-from openai import OpenAI
 
-# ✅ Set Streamlit secrets in `.streamlit/secrets.toml`
-client = OpenAI(
-    api_key=st.secrets["OPENAI_API_KEY"],
-    project=st.secrets["OPENAI_PROJECT_ID"]
-)
-
-FAQ_URL = "https://script.google.com/macros/s/AKfycbzkhSsb_mIrgvDNMv5eh5-aDDrDse5UeTzLpyutUUlJP07Ew2wJxnM96IT24vroZ_hH/exec"
-
+# ✅ Load all FAQ data and embeddings from the JSON file
 @st.cache_data
-def fetch_faq():
-    try:
-        res = requests.get(FAQ_URL)
-        return [item for item in res.json() if item["question"].strip()]
-    except Exception as e:
-        st.error(f"Failed to load FAQ data: {e}")
-        return []
+def load_faq_embeddings():
+    with open("faq_embedd.json", "r") as f:
+        data = json.load(f)
 
-@st.cache_data
-def get_embedding(text):
-    try:
-        response = client.embeddings.create(
-            input=[text],
-            model="text-embedding-ada-002"
-        )
-        return np.array(response.data[0].embedding)
-    except Exception as e:
-        st.error(f"Embedding error: {e}")
-        return np.zeros((1536,))
+    questions = [item["question"] for item in data]
+    answers = [item["answer"] for item in data]
+    metadata = [
+        {
+            "stage": item.get("stage", ""),
+            "tags": ", ".join(item.get("tags", [])) if isinstance(item.get("tags"), list) else item.get("tags", ""),
+            "property": item.get("property", ""),
+            "category": item.get("category", "")
+        }
+        for item in data
+    ]
+    embeddings = [np.array(item["embedding"], dtype=np.float32) for item in data]
+    return questions, answers, metadata, embeddings
 
-# Load data
-faq_data = fetch_faq()
-questions = [item["question"] for item in faq_data]
-answers = [item["answer"] for item in faq_data]
-metadata = [{k: v for k, v in item.items() if k not in ['question', 'answer']} for item in faq_data]
-embeddings = [get_embedding(q) for q in questions]
+questions, answers, metadata, embeddings = load_faq_embeddings()
 
+# 🔍 Dummy embedding generator (replace with real model later if needed)
+def embed_query(text):
+    vec = np.array([ord(c) for c in text.lower() if c.isalnum()])
+    vec = vec[:len(embeddings[0])]
+    if len(vec) < len(embeddings[0]):
+        vec = np.pad(vec, (0, len(embeddings[0]) - len(vec)))
+    return vec.astype(np.float32)
+
+# 🔁 Search for best-matching question
 def get_best_answer(query):
-    query_embed = get_embedding(query)
-    sims = cosine_similarity([query_embed], embeddings)[0]
+    query_vec = embed_query(query)
+    sims = cosine_similarity([query_vec], embeddings)[0]
     best_idx = int(np.argmax(sims))
     return {
         "matched_question": questions[best_idx],
@@ -51,7 +45,7 @@ def get_best_answer(query):
         "score": sims[best_idx]
     }
 
-# UI
+# 🖥️ Streamlit UI
 st.set_page_config(page_title="FAQ Chatbot", page_icon="🤖")
 st.title("🤖 Property FAQ Chatbot")
 
@@ -63,8 +57,7 @@ if query:
     st.markdown(f"**Answer:** {result['answer']}")
     st.markdown("**Extra Info:**")
     for k, v in result["metadata"].items():
-        st.write(f"- **{k.capitalize()}**: {v}")
+        st.markdown(f"- **{k.capitalize()}**: {v}")
 
-      
-   
-
+        
+  
