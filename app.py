@@ -4,14 +4,10 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 
-# ✅ Load sentence-transformers model (offline)
 @st.cache_resource
 def load_model():
     return SentenceTransformer('all-MiniLM-L6-v2')
 
-model = load_model()
-
-# ✅ Load FAQ data
 @st.cache_data
 def load_faq():
     with open("faq_data.json", "r") as f:
@@ -27,39 +23,41 @@ def load_faq():
         }
         for item in data
     ]
-    return data, questions, answers, metadata
+    return questions, answers, metadata
 
-faq_data, questions, answers, metadata = load_faq()
+def main():
+    st.set_page_config(page_title="Hodo Chatbot", page_icon="🤖")
+    st.title("🤖 HODO FAQ Chatbot")
 
-# ✅ Precompute question embeddings
-@st.cache_data
-def compute_embeddings():
-    return model.encode(questions, convert_to_numpy=True)
+    model = load_model()
+    questions, answers, metadata = load_faq()
 
-faq_embeddings = compute_embeddings()
+    @st.cache_data
+    def compute_embeddings():
+        return model.encode(questions, convert_to_numpy=True)
 
-# ✅ Search for best matching answer
-def get_best_answer(query):
-    query_vec = model.encode([query], convert_to_numpy=True)
-    sims = cosine_similarity(query_vec, faq_embeddings)[0]
-    best_idx = int(np.argmax(sims))
-    return {
-        "matched_question": questions[best_idx],
-        "answer": answers[best_idx],
-        "metadata": metadata[best_idx],
-        "score": float(sims[best_idx])
-    }
+    faq_embeddings = compute_embeddings()
 
-# ✅ Streamlit UI
-st.set_page_config(page_title="FAQ Chatbot", page_icon="🤖")
-st.title("🤖 HODO FAQ Chatbot ")
+    def get_best_answer(query):
+        query_vec = model.encode([query], convert_to_numpy=True)
+        sims = cosine_similarity(query_vec, faq_embeddings)[0]
+        best_idx = int(np.argmax(sims))
+        return {
+            "matched_question": questions[best_idx],
+            "answer": answers[best_idx],
+            "metadata": metadata[best_idx],
+            "score": float(sims[best_idx])
+        }
 
-query = st.text_input(" Hi,Ask a question:")
+    query = st.text_input("Hi, Ask a question:")
 
-if query:
-    result = get_best_answer(query)
-    st.markdown(f"**Matched Question:** {result['matched_question']}")
-    st.markdown(f"**Answer:** {result['answer']}")
-    st.markdown("**Extra Info:**")
-    for k, v in result["metadata"].items():
-        st.write(f"- **{k.capitalize()}**: {v}")
+    if query:
+        result = get_best_answer(query)
+        st.markdown(f"**Matched Question:** {result['matched_question']}")
+        st.markdown(f"**Answer:** {result['answer']}")
+        st.markdown("**Extra Info:**")
+        for k, v in result["metadata"].items():
+            st.write(f"- **{k.capitalize()}**: {v}")
+
+if __name__ == "__main__":
+    main()
